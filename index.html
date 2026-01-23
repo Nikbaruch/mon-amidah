@@ -194,7 +194,7 @@
                         // Les cartes précédentes remontent et s'empilent en haut
                         shadow: true,
                         // [x, y, z] : Remonte de 6% (MODIF : plus fin) par carte, reste en taille réelle (scale 1)
-                        translate: [0, '-6%', -1], 
+                        translate: [0, '-3%', -1], 
                         scale: 1, 
                         opacity: 1, 
                     },
@@ -208,9 +208,23 @@
                 mousewheel: true,
                 keyboard: { enabled: true },
             });
+            
+            // ÉCOUTEUR DE CHANGEMENT DE CARTE
+            // Garantit que la nouvelle carte (qu'on avance ou recule) s'affiche du bon côté
+            swiper.on('slideChange', function () {
+                const activeIndex = swiper.activeIndex;
+                const card = swiper.slides[activeIndex].querySelector('.card-object');
+                
+                // On met à jour l'état de la carte qui devient active sans animation (instantané)
+                // pour éviter de voir la carte tourner pendant le slide
+                card.style.transition = 'none';
+                if (isGlobalFlipped) card.classList.add('is-flipped');
+                else card.classList.remove('is-flipped');
+                void card.offsetWidth; // Force le navigateur à appliquer le changement
+                card.style.transition = ''; // On remet l'animation pour le prochain clic
+            });
 
-            // 2. Fonction pour gérer le retournement (Animation locale, État global)
-            // Nous attachons la fonction au scope global pour qu'elle soit accessible par le 'onclick' du HTML généré
+            // 2. Fonction pour gérer le retournement
             window.toggleGlobalFlip = function() {
                 isGlobalFlipped = !isGlobalFlipped;
                 
@@ -221,23 +235,22 @@
                     const card = slides[i].querySelector('.card-object');
                     
                     if (i === activeIndex) {
-                        // Carte active : On l'anime normalement (transition CSS active)
+                        // Carte active : On l'anime visiblement
                         card.style.transition = ''; 
                         if (isGlobalFlipped) card.classList.add('is-flipped');
                         else card.classList.remove('is-flipped');
-                    } else {
-                        // Autres cartes : On change l'état INSTANTANÉMENT (sans animation)
+                    } 
+                    else if (i > activeIndex) {
+                        // Cartes futures (cachées) : On les met à jour silencieusement
+                        // Comme ça, quand elles arriveront, elles seront déjà correctes
                         card.style.transition = 'none';
-                        
                         if (isGlobalFlipped) card.classList.add('is-flipped');
                         else card.classList.remove('is-flipped');
-                        
-                        // On force le navigateur à appliquer le changement tout de suite
                         void card.offsetWidth;
-                        
-                        // On remet la transition pour les futurs mouvements
                         card.style.transition = '';
                     }
+                    // Cartes passées (i < activeIndex) : On ne touche RIEN.
+                    // Elles restent dans leur état actuel dans le tas visible pour ne pas distraire l'œil.
                 }
             }
         });
