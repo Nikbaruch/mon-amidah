@@ -20,6 +20,7 @@
         body, html {
             margin: 0; padding: 0;
             /* Utilisation de dvh pour s'adapter parfaitement aux mobiles avec barres d'adresse */
+            height: 100vh;
             height: 100dvh; 
             width: 100%;
             overflow: hidden; 
@@ -30,27 +31,30 @@
         /* --- CONTENEUR SWIPER --- */
         .swiper {
             width: 100%;
-            height: 100dvh; /* Force la hauteur dynamique */
+            height: 100%;
         }
 
         .swiper-slide {
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 0; /* Suppression du padding pour éviter tout décalage */
+            padding: 0;
+            /* Important pour l'effet stack : permet de voir la carte du dessous */
+            overflow: visible; 
+            background: transparent;
         }
 
         /* --- LA CARTE (SCÈNE 3D) --- */
         .card-scene {
             width: 100%;
-            /* Ajustement des dimensions pour être sûr que ça rentre sans déborder */
-            max-width: 95vw; 
+            /* Dimensions ajustées pour bien remplir l'écran sans déborder */
+            max-width: 90vw; 
             aspect-ratio: 9/16; 
-            max-height: 95dvh;
+            max-height: 85dvh; /* Laisse un peu de place en haut/bas pour l'effet d'empilement */
             perspective: 1000px;
             cursor: pointer;
-            /* Centrage explicite */
             margin: auto; 
+            position: relative;
         }
 
         /* Le conteneur qui bouge */
@@ -59,8 +63,10 @@
             height: 100%;
             position: relative;
             transform-style: preserve-3d;
-            transition: transform 0.5s cubic-bezier(0.4, 0.2, 0.2, 1);
-            border-radius: 0; /* Suppression du radius par défaut si l'image le gère déjà */
+            transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1); /* Animation de retournement plus fluide */
+            border-radius: 20px;
+            /* Ombre portée dynamique pour l'effet de pile */
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
         }
 
         /* Classe ajoutée en JS pour retourner la carte */
@@ -75,8 +81,9 @@
             height: 100%;
             backface-visibility: hidden;
             -webkit-backface-visibility: hidden;
-            overflow: visible; /* On laisse l'image gérer les bords */
-            background: transparent; /* Suppression du fond gris */
+            border-radius: 20px;
+            overflow: hidden;
+            background: #1a1a1a; /* Fond de sécurité sombre */
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -86,14 +93,14 @@
         /* Face Arrière (Verso) */
         .card-face.back {
             transform: rotateY(180deg);
-            background: transparent; /* Suppression du fond gris */
+            background: #1a1a1a;
         }
 
         /* --- IMAGES --- */
         .card-face img {
             width: 100%;
             height: 100%;
-            object-fit: contain; 
+            object-fit: contain; /* L'image entière est toujours visible */
             pointer-events: none;
             display: block;
         }
@@ -105,7 +112,7 @@
             text-align: center;
             color: white;
             line-height: 1.4;
-            background: rgba(0,0,0,0.8); /* Fond sombre pour le message d'erreur */
+            background: rgba(0,0,0,0.8);
             border-radius: 8px;
         }
     </style>
@@ -165,12 +172,26 @@
             wrapper.insertAdjacentHTML('beforeend', slideHTML);
         }
 
-        // 1. Initialisation de Swiper (Scroll Vertical)
+        // 1. Initialisation de Swiper (Mode "STACK" Vertical)
         const swiper = new Swiper('.swiper', {
             direction: 'vertical',
-            effect: 'slide',
-            speed: 400,
-            spaceBetween: 0,
+            effect: 'creative', // Utilisation de l'effet "Créatif" pour faire le tas
+            creativeEffect: {
+                limitProgress: 3, // On voit jusqu'à 3 cartes en profondeur
+                perspective: true,
+                prev: {
+                    // La carte précédente : reste sur place, s'assombrit (shadow) et recule en profondeur
+                    shadow: true,
+                    translate: [0, 0, -200], // [x, y, z]
+                    opacity: 1, 
+                },
+                next: {
+                    // La carte suivante : arrive du bas (100% height) pour couvrir l'actuelle
+                    translate: [0, '100%', 0], 
+                },
+            },
+            speed: 600, // Vitesse de l'animation (ms) - un peu plus lent pour le "poids"
+            resistanceRatio: 0.8, // Sensation élastique aux extrémités
             mousewheel: true,
             keyboard: { enabled: true },
         });
