@@ -83,7 +83,7 @@
             -webkit-backface-visibility: hidden;
             border-radius: 20px;
             overflow: hidden;
-            background: #1a1a1a; /* Fond de sécurité sombre */
+            background: transparent; /* MODIF : Transparent pour éviter le cadre gris */
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -93,7 +93,7 @@
         /* Face Arrière (Verso) */
         .card-face.back {
             transform: rotateY(180deg);
-            background: #1a1a1a;
+            background: transparent; /* MODIF : Transparent pour éviter le cadre gris */
         }
 
         /* --- IMAGES --- */
@@ -182,8 +182,8 @@
                 prev: {
                     // Les cartes précédentes remontent et s'empilent en haut
                     shadow: true,
-                    // [x, y, z] : Remonte de 12% par carte, reste en taille réelle (scale 1)
-                    translate: [0, '-12%', -1], 
+                    // [x, y, z] : Remonte de 6% (MODIF : plus fin) par carte, reste en taille réelle (scale 1)
+                    translate: [0, '-6%', -1], 
                     scale: 1, 
                     opacity: 1, 
                 },
