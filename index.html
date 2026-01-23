@@ -69,7 +69,7 @@
             position: relative;
             transform-style: preserve-3d;
             transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1); /* Animation de retournement plus fluide */
-            /* MODIF : Suppression du background, border-radius et box-shadow sur le conteneur */
+            /* Suppression du background, border-radius et box-shadow sur le conteneur */
         }
 
         /* Classe ajoutée en JS pour retourner la carte */
@@ -84,7 +84,7 @@
             height: 100%;
             backface-visibility: hidden;
             -webkit-backface-visibility: hidden;
-            /* MODIF : Suppression de l'overflow hidden et border-radius pour laisser passer l'ombre de l'image */
+            /* Suppression de l'overflow hidden et border-radius pour laisser passer l'ombre de l'image */
             overflow: visible;
             background: transparent; 
             display: flex;
@@ -106,7 +106,7 @@
             object-fit: contain; /* L'image entière est toujours visible */
             pointer-events: none;
             display: block;
-            /* MODIF : L'ombre est maintenant calculée sur les pixels de l'image elle-même */
+            /* L'ombre est maintenant calculée sur les pixels de l'image elle-même */
             filter: drop-shadow(0 20px 30px rgba(0,0,0,0.8));
         }
         
@@ -134,88 +134,113 @@
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 
     <script>
-        // CONFIGURATION
-        const totalCards = 18; // Nombre total de cartes
-        const wrapper = document.getElementById('cards-wrapper');
-        let isGlobalFlipped = false; // État global : est-ce qu'on regarde le recto ou le verso ?
+        document.addEventListener('DOMContentLoaded', () => {
+            // CONFIGURATION
+            const totalCards = 18; // Nombre total de cartes
+            const wrapper = document.getElementById('cards-wrapper');
+            let isGlobalFlipped = false; // État global : est-ce qu'on regarde le recto ou le verso ?
 
-        // FONCTION DE GESTION D'ERREUR
-        window.handleImageError = function(imgElement, imageSource) {
-            imgElement.style.display = 'none';
-            const msg = document.createElement('div');
-            msg.className = 'error-message';
-            msg.innerHTML = `Image manquante:<br><br>${imageSource}`;
-            imgElement.parentElement.appendChild(msg);
-        };
+            if (!wrapper) {
+                console.error("Erreur: L'élément 'cards-wrapper' est introuvable.");
+                return;
+            }
 
-        // GÉNÉRATION AUTOMATIQUE DES 18 CARTES
-        for (let i = 1; i <= totalCards; i++) {
-            const num = i.toString().padStart(2, '0');
-            const imgRecto = `images/cards/card-${num}-a.png`;
-            const imgVerso = `images/cards/card-${num}-b.png`;
+            // FONCTION DE GESTION D'ERREUR
+            window.handleImageError = function(imgElement, imageSource) {
+                imgElement.style.display = 'none';
+                const msg = document.createElement('div');
+                msg.className = 'error-message';
+                msg.innerHTML = `Image manquante:<br><br>${imageSource}`;
+                imgElement.parentElement.appendChild(msg);
+            };
 
-            const slideHTML = `
-                <div class="swiper-slide">
-                    <div class="card-scene" onclick="toggleGlobalFlip()">
-                        <div class="card-object">
-                            <!-- RECTO (Face A) -->
-                            <div class="card-face front">
-                                <img src="${imgRecto}" alt="Bénédiction ${i}" 
-                                     onerror="handleImageError(this, '${imgRecto}')">
-                            </div>
+            // GÉNÉRATION AUTOMATIQUE DES 18 CARTES
+            for (let i = 1; i <= totalCards; i++) {
+                const num = i.toString().padStart(2, '0');
+                const imgRecto = `images/cards/card-${num}-a.png`;
+                const imgVerso = `images/cards/card-${num}-b.png`;
 
-                            <!-- VERSO (Face B) -->
-                            <div class="card-face back">
-                                <img src="${imgVerso}" alt="Explication ${i}"
-                                     onerror="handleImageError(this, '${imgVerso}')">
+                const slideHTML = `
+                    <div class="swiper-slide">
+                        <div class="card-scene" onclick="toggleGlobalFlip()">
+                            <div class="card-object">
+                                <!-- RECTO (Face A) -->
+                                <div class="card-face front">
+                                    <img src="${imgRecto}" alt="Bénédiction ${i}" 
+                                         onerror="handleImageError(this, '${imgRecto}')">
+                                </div>
+
+                                <!-- VERSO (Face B) -->
+                                <div class="card-face back">
+                                    <img src="${imgVerso}" alt="Explication ${i}"
+                                         onerror="handleImageError(this, '${imgVerso}')">
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            `;
-            
-            wrapper.insertAdjacentHTML('beforeend', slideHTML);
-        }
+                `;
+                
+                wrapper.insertAdjacentHTML('beforeend', slideHTML);
+            }
 
-        // 1. Initialisation de Swiper (Mode "STACK" Vertical)
-        const swiper = new Swiper('.swiper', {
-            direction: 'vertical',
-            effect: 'creative', // Utilisation de l'effet "Créatif" pour faire le tas
-            creativeEffect: {
-                limitProgress: 6, // Augmentation pour voir plus de cartes empilées en haut
-                perspective: true,
-                prev: {
-                    // Les cartes précédentes remontent et s'empilent en haut
-                    shadow: true,
-                    // [x, y, z] : Remonte de 6% (MODIF : plus fin) par carte, reste en taille réelle (scale 1)
-                    translate: [0, '-6%', -1], 
-                    scale: 1, 
-                    opacity: 1, 
+            // 1. Initialisation de Swiper (Mode "STACK" Vertical)
+            const swiper = new Swiper('.swiper', {
+                direction: 'vertical',
+                effect: 'creative', // Utilisation de l'effet "Créatif" pour faire le tas
+                creativeEffect: {
+                    limitProgress: 6, // Augmentation pour voir plus de cartes empilées en haut
+                    perspective: true,
+                    prev: {
+                        // Les cartes précédentes remontent et s'empilent en haut
+                        shadow: true,
+                        // [x, y, z] : Remonte de 6% (MODIF : plus fin) par carte, reste en taille réelle (scale 1)
+                        translate: [0, '-6%', -1], 
+                        scale: 1, 
+                        opacity: 1, 
+                    },
+                    next: {
+                        // La carte suivante arrive du bas et couvre tout
+                        translate: [0, '100%', 0], 
+                    },
                 },
-                next: {
-                    // La carte suivante arrive du bas et couvre tout
-                    translate: [0, '100%', 0], 
-                },
-            },
-            speed: 600, // Vitesse de l'animation (ms) - un peu plus lent pour le "poids"
-            resistanceRatio: 0.8, // Sensation élastique aux extrémités
-            mousewheel: true,
-            keyboard: { enabled: true },
-        });
-
-        // 2. Fonction Globale pour retourner TOUTES les cartes
-        function toggleGlobalFlip() {
-            isGlobalFlipped = !isGlobalFlipped;
-            
-            const allCards = document.querySelectorAll('.card-object');
-            allCards.forEach(card => {
-                if (isGlobalFlipped) {
-                    card.classList.add('is-flipped');
-                } else {
-                    card.classList.remove('is-flipped');
-                }
+                speed: 600, // Vitesse de l'animation (ms) - un peu plus lent pour le "poids"
+                resistanceRatio: 0.8, // Sensation élastique aux extrémités
+                mousewheel: true,
+                keyboard: { enabled: true },
             });
-        }
+
+            // 2. Fonction pour gérer le retournement (Animation locale, État global)
+            // Nous attachons la fonction au scope global pour qu'elle soit accessible par le 'onclick' du HTML généré
+            window.toggleGlobalFlip = function() {
+                isGlobalFlipped = !isGlobalFlipped;
+                
+                const slides = swiper.slides;
+                const activeIndex = swiper.activeIndex;
+                
+                for (let i = 0; i < slides.length; i++) {
+                    const card = slides[i].querySelector('.card-object');
+                    
+                    if (i === activeIndex) {
+                        // Carte active : On l'anime normalement (transition CSS active)
+                        card.style.transition = ''; 
+                        if (isGlobalFlipped) card.classList.add('is-flipped');
+                        else card.classList.remove('is-flipped');
+                    } else {
+                        // Autres cartes : On change l'état INSTANTANÉMENT (sans animation)
+                        card.style.transition = 'none';
+                        
+                        if (isGlobalFlipped) card.classList.add('is-flipped');
+                        else card.classList.remove('is-flipped');
+                        
+                        // On force le navigateur à appliquer le changement tout de suite
+                        void card.offsetWidth;
+                        
+                        // On remet la transition pour les futurs mouvements
+                        card.style.transition = '';
+                    }
+                }
+            }
+        });
     </script>
 </body>
 </html>
