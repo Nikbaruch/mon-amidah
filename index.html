@@ -9,7 +9,7 @@
     <meta name="description" content="Livre de prière numérique">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#1a1a1a">
+    <meta name="theme-color" content="#121212">
 
     <!-- Swiper CSS (Librairie pour le slide) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
@@ -23,7 +23,6 @@
             overflow: hidden; /* Empêche le scroll natif du navigateur */
             background-color: #121212; /* Fond sombre élégant */
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            color: white;
         }
 
         /* --- CONTENEUR SWIPER --- */
@@ -36,15 +35,18 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            /* Padding réduit pour maximiser l'espace de la carte */
+            padding: 10px;
         }
 
         /* --- LA CARTE (SCÈNE 3D) --- */
         .card-scene {
             width: 100%;
-            max-width: 400px; /* Largeur max comme un téléphone */
-            aspect-ratio: 9/16; /* Format portrait standard */
-            max-height: 85vh;
+            /* Largeur max : on laisse la carte prendre de la place mais on garde des marges */
+            max-width: 90vw; 
+            aspect-ratio: 9/16; 
+            /* On limite la hauteur pour être sûr qu'elle tienne dans l'écran sans scroll */
+            max-height: 90vh;
             perspective: 1000px; /* Donne la profondeur 3D */
             cursor: pointer;
         }
@@ -55,9 +57,10 @@
             height: 100%;
             position: relative;
             transform-style: preserve-3d;
-            transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+            transition: transform 0.5s cubic-bezier(0.4, 0.2, 0.2, 1);
             border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            /* Ombre légère pour détacher la carte du fond */
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
         }
 
         /* Classe ajoutée en JS pour retourner la carte */
@@ -91,36 +94,10 @@
         .card-face img {
             width: 100%;
             height: 100%;
-            /* 'contain' assure que tout le texte de la prière est visible sans être coupé */
+            /* 'contain' assure que tout le texte est visible */
             object-fit: contain; 
             pointer-events: none;
-        }
-
-        /* Indicateur visuel (Optionnel) */
-        .instruction {
-            position: absolute;
-            bottom: 20px;
-            width: 100%;
-            text-align: center;
-            opacity: 0.5;
-            font-size: 0.8rem;
-            pointer-events: none;
-            z-index: 10;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-        }
-
-        /* Petit numéro de page */
-        .page-number {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.6);
-            padding: 5px 10px;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            font-weight: bold;
-            z-index: 10;
-            backdrop-filter: blur(4px);
+            display: block;
         }
         
         /* Style pour le message d'erreur d'image */
@@ -148,46 +125,38 @@
         // CONFIGURATION
         const totalCards = 18; // Nombre total de cartes
         const wrapper = document.getElementById('cards-wrapper');
+        let isGlobalFlipped = false; // État global : est-ce qu'on regarde le recto ou le verso ?
 
-        // FONCTION DE GESTION D'ERREUR (DÉPLACÉE ICI POUR ÉVITER LES ERREURS DE SYNTAXE)
+        // FONCTION DE GESTION D'ERREUR
         window.handleImageError = function(imgElement, imageSource) {
-            // Change le fond en rouge
             imgElement.parentElement.style.background = '#b91c1c';
-            // Cache l'image cassée
             imgElement.style.display = 'none';
-            // Ajoute le message de texte
             const msg = document.createElement('div');
             msg.className = 'error-message';
-            msg.innerHTML = `Image manquante:<br><br>${imageSource}<br><br>Vérifiez le dossier images/cards/`;
+            msg.innerHTML = `Image manquante:<br><br>${imageSource}`;
             imgElement.parentElement.appendChild(msg);
         };
 
         // GÉNÉRATION AUTOMATIQUE DES 18 CARTES
         for (let i = 1; i <= totalCards; i++) {
-            // Formate le numéro avec un zéro devant si < 10 (ex: "01", "05", "12")
             const num = i.toString().padStart(2, '0');
-            
-            // Chemins des images
             const imgRecto = `images/cards/card-${num}-a.png`;
             const imgVerso = `images/cards/card-${num}-b.png`;
 
-            // Création du HTML pour une slide
-            // Note: on appelle maintenant handleImageError proprement
+            // Note : j'ai supprimé les <div> page-number et instruction
+            // Note : onclick appelle maintenant toggleGlobalFlip()
             const slideHTML = `
                 <div class="swiper-slide">
-                    <div class="card-scene" onclick="flipCard(this)">
+                    <div class="card-scene" onclick="toggleGlobalFlip()">
                         <div class="card-object">
                             <!-- RECTO (Face A) -->
                             <div class="card-face front">
-                                <div class="page-number">${i} / ${totalCards}</div>
                                 <img src="${imgRecto}" alt="Bénédiction ${i}" 
                                      onerror="handleImageError(this, '${imgRecto}')">
-                                <div class="instruction">Toucher pour retourner</div>
                             </div>
 
                             <!-- VERSO (Face B) -->
                             <div class="card-face back">
-                                <div class="page-number">${i} / ${totalCards}</div>
                                 <img src="${imgVerso}" alt="Explication ${i}"
                                      onerror="handleImageError(this, '${imgVerso}')">
                             </div>
@@ -196,7 +165,6 @@
                 </div>
             `;
             
-            // Ajout de la carte au wrapper
             wrapper.insertAdjacentHTML('beforeend', slideHTML);
         }
 
@@ -207,26 +175,24 @@
             speed: 400,
             spaceBetween: 0,
             mousewheel: true,
-            // Optionnel : ajouter du clavier pour tester sur ordi
-            keyboard: {
-                enabled: true,
-            },
+            keyboard: { enabled: true },
         });
 
-        // 2. Fonction pour retourner la carte
-        function flipCard(element) {
-            const cardObject = element.querySelector('.card-object');
-            cardObject.classList.toggle('is-flipped');
-        }
-
-        // 3. Reset automatique
-        // Quand on change de carte, on remet celle d'avant à l'endroit discrètement
-        swiper.on('slideChange', function () {
+        // 2. Fonction Globale pour retourner TOUTES les cartes
+        // Quand on clique, on change l'état "mode verso" pour toute l'appli
+        function toggleGlobalFlip() {
+            isGlobalFlipped = !isGlobalFlipped;
+            
+            // On applique la rotation à toutes les cartes (celle visible et les suivantes)
             const allCards = document.querySelectorAll('.card-object');
-            setTimeout(() => {
-                allCards.forEach(card => card.classList.remove('is-flipped'));
-            }, 300);
-        });
+            allCards.forEach(card => {
+                if (isGlobalFlipped) {
+                    card.classList.add('is-flipped');
+                } else {
+                    card.classList.remove('is-flipped');
+                }
+            });
+        }
     </script>
 </body>
 </html>
