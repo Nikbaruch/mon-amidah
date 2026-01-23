@@ -7,9 +7,14 @@
     <!-- Référencement & PWA -->
     <title>Amidah - 18 Bénédictions</title>
     <meta name="description" content="Livre de prière numérique">
+    
+    <!-- Configuration iOS Web App -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#121212">
+    
+    <!-- Icône pour l'écran d'accueil (utilise la première carte par défaut) -->
+    <link rel="apple-touch-icon" href="images/cards/card-01-a.png">
 
     <!-- Swiper CSS (Librairie pour le slide) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
@@ -64,9 +69,7 @@
             position: relative;
             transform-style: preserve-3d;
             transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1); /* Animation de retournement plus fluide */
-            border-radius: 20px;
-            /* Ombre portée dynamique pour l'effet de pile */
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            /* MODIF : Suppression du background, border-radius et box-shadow sur le conteneur */
         }
 
         /* Classe ajoutée en JS pour retourner la carte */
@@ -81,9 +84,9 @@
             height: 100%;
             backface-visibility: hidden;
             -webkit-backface-visibility: hidden;
-            border-radius: 20px;
-            overflow: hidden;
-            background: transparent; /* MODIF : Transparent pour éviter le cadre gris */
+            /* MODIF : Suppression de l'overflow hidden et border-radius pour laisser passer l'ombre de l'image */
+            overflow: visible;
+            background: transparent; 
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -93,7 +96,7 @@
         /* Face Arrière (Verso) */
         .card-face.back {
             transform: rotateY(180deg);
-            background: transparent; /* MODIF : Transparent pour éviter le cadre gris */
+            background: transparent;
         }
 
         /* --- IMAGES --- */
@@ -103,6 +106,8 @@
             object-fit: contain; /* L'image entière est toujours visible */
             pointer-events: none;
             display: block;
+            /* MODIF : L'ombre est maintenant calculée sur les pixels de l'image elle-même */
+            filter: drop-shadow(0 20px 30px rgba(0,0,0,0.8));
         }
         
         /* Style pour le message d'erreur d'image */
