@@ -177,16 +177,18 @@
             direction: 'vertical',
             effect: 'creative', // Utilisation de l'effet "Créatif" pour faire le tas
             creativeEffect: {
-                limitProgress: 3, // On voit jusqu'à 3 cartes en profondeur
+                limitProgress: 6, // Augmentation pour voir plus de cartes empilées en haut
                 perspective: true,
                 prev: {
-                    // La carte précédente : reste sur place, s'assombrit (shadow) et recule en profondeur
+                    // Les cartes précédentes remontent et s'empilent en haut
                     shadow: true,
-                    translate: [0, 0, -200], // [x, y, z]
+                    // [x, y, z] : Remonte de 12% par carte, reste en taille réelle (scale 1)
+                    translate: [0, '-12%', -1], 
+                    scale: 1, 
                     opacity: 1, 
                 },
                 next: {
-                    // La carte suivante : arrive du bas (100% height) pour couvrir l'actuelle
+                    // La carte suivante arrive du bas et couvre tout
                     translate: [0, '100%', 0], 
                 },
             },
