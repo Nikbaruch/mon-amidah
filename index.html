@@ -19,36 +19,38 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body, html {
             margin: 0; padding: 0;
-            height: 100%; width: 100%;
-            overflow: hidden; /* Empêche le scroll natif du navigateur */
-            background-color: #121212; /* Fond sombre élégant */
+            /* Utilisation de dvh pour s'adapter parfaitement aux mobiles avec barres d'adresse */
+            height: 100dvh; 
+            width: 100%;
+            overflow: hidden; 
+            background-color: #121212; 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
         /* --- CONTENEUR SWIPER --- */
         .swiper {
             width: 100%;
-            height: 100%;
+            height: 100dvh; /* Force la hauteur dynamique */
         }
 
         .swiper-slide {
             display: flex;
             justify-content: center;
             align-items: center;
-            /* Padding réduit pour maximiser l'espace de la carte */
-            padding: 10px;
+            padding: 0; /* Suppression du padding pour éviter tout décalage */
         }
 
         /* --- LA CARTE (SCÈNE 3D) --- */
         .card-scene {
             width: 100%;
-            /* Largeur max : on laisse la carte prendre de la place mais on garde des marges */
-            max-width: 90vw; 
+            /* Ajustement des dimensions pour être sûr que ça rentre sans déborder */
+            max-width: 95vw; 
             aspect-ratio: 9/16; 
-            /* On limite la hauteur pour être sûr qu'elle tienne dans l'écran sans scroll */
-            max-height: 90vh;
-            perspective: 1000px; /* Donne la profondeur 3D */
+            max-height: 95dvh;
+            perspective: 1000px;
             cursor: pointer;
+            /* Centrage explicite */
+            margin: auto; 
         }
 
         /* Le conteneur qui bouge */
@@ -58,9 +60,7 @@
             position: relative;
             transform-style: preserve-3d;
             transition: transform 0.5s cubic-bezier(0.4, 0.2, 0.2, 1);
-            border-radius: 20px;
-            /* Ombre légère pour détacher la carte du fond */
-            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+            border-radius: 0; /* Suppression du radius par défaut si l'image le gère déjà */
         }
 
         /* Classe ajoutée en JS pour retourner la carte */
@@ -73,11 +73,10 @@
             position: absolute;
             width: 100%;
             height: 100%;
-            backface-visibility: hidden; /* Cache le dos quand on retourne */
+            backface-visibility: hidden;
             -webkit-backface-visibility: hidden;
-            border-radius: 20px;
-            overflow: hidden;
-            background: #1e1e1e;
+            overflow: visible; /* On laisse l'image gérer les bords */
+            background: transparent; /* Suppression du fond gris */
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -87,14 +86,13 @@
         /* Face Arrière (Verso) */
         .card-face.back {
             transform: rotateY(180deg);
-            background: #2a2a2a;
+            background: transparent; /* Suppression du fond gris */
         }
 
         /* --- IMAGES --- */
         .card-face img {
             width: 100%;
             height: 100%;
-            /* 'contain' assure que tout le texte est visible */
             object-fit: contain; 
             pointer-events: none;
             display: block;
@@ -107,6 +105,8 @@
             text-align: center;
             color: white;
             line-height: 1.4;
+            background: rgba(0,0,0,0.8); /* Fond sombre pour le message d'erreur */
+            border-radius: 8px;
         }
     </style>
 </head>
@@ -129,7 +129,6 @@
 
         // FONCTION DE GESTION D'ERREUR
         window.handleImageError = function(imgElement, imageSource) {
-            imgElement.parentElement.style.background = '#b91c1c';
             imgElement.style.display = 'none';
             const msg = document.createElement('div');
             msg.className = 'error-message';
@@ -143,8 +142,6 @@
             const imgRecto = `images/cards/card-${num}-a.png`;
             const imgVerso = `images/cards/card-${num}-b.png`;
 
-            // Note : j'ai supprimé les <div> page-number et instruction
-            // Note : onclick appelle maintenant toggleGlobalFlip()
             const slideHTML = `
                 <div class="swiper-slide">
                     <div class="card-scene" onclick="toggleGlobalFlip()">
@@ -179,11 +176,9 @@
         });
 
         // 2. Fonction Globale pour retourner TOUTES les cartes
-        // Quand on clique, on change l'état "mode verso" pour toute l'appli
         function toggleGlobalFlip() {
             isGlobalFlipped = !isGlobalFlipped;
             
-            // On applique la rotation à toutes les cartes (celle visible et les suivantes)
             const allCards = document.querySelectorAll('.card-object');
             allCards.forEach(card => {
                 if (isGlobalFlipped) {
