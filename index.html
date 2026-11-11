@@ -31,18 +31,18 @@
 
             /* 2. Opacité de la carte au premier plan */
             --face-a-opacity: 1;              /* Opacité quand la Face A est devant (1 = 100%) */
-            --face-b-opacity: 0.86;           /* Opacité quand la Face B est devant (0.86 = 86%) */
+            --face-b-opacity: 0.93;           /* Opacité quand la Face B est devant (0.93 = 93%) */
 
             /* 3. Lueur externe noire (effet de premier plan) */
             /* Format : [décalage-x] [décalage-y] [flou] [étendue] [couleur] */
             --card-glow: 0 0 28px 6px rgba(0, 0, 0, 0.85);
 
-            /* 4. Arrière-plan (plein écran sans bord) */
+            /* 4. Arrière-plan (plein écran sans bord) & Voiles */
             /* Zoom (> 1.07) pour rogner les bords de la carte en arrière-plan */
             --bg-scale-a: 1.08;               /* Zoom du fond quand la Face A est en arrière-plan */
             --bg-scale-b: 1.08;               /* Zoom du fond quand la Face B est en arrière-plan */
-            --bg-opacity-a: 1;                /* Opacité de la Face A en arrière-plan */
-            --bg-opacity-b: 1;                /* Opacité de la Face B en arrière-plan */
+            --bg-veil-black: 0.47;            /* Voile noir (47%) sur le fond quand la Face B est devant */
+            --bg-veil-white: 0.47;            /* Voile blanc (47%) sur le fond quand la Face A est devant */
 
             /* 5. Vitesse des animations */
             --flip-duration: 0.6s;            /* Durée du retournement 3D */
@@ -73,42 +73,32 @@
         }
 
         /* ==========================================================================
-           CONTENEUR SWIPER & SLIDES
+           SCÈNE D'ARRIÈRE-PLAN FIXE (FONDU ENCHAÎNÉ AU CHANGEMENT DE CARTE)
            ========================================================================== */
-        .swiper {
-            width: 100%;
-            height: 100%;
-            touch-action: none;
-        }
-
-        .swiper-slide {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden; /* Empêche tout débordement de l'arrière-plan */
-            background: #000000;
-        }
-
-        /* Optimisation mémoire iOS : masque le rendu des slides éloignées */
-        .swiper-slide.is-unloaded .slide-bg,
-        .swiper-slide.is-unloaded .card-scene {
-            visibility: hidden;
-        }
-
-        /* ==========================================================================
-           ARRIÈRE-PLAN PLEIN ÉCRAN (SANS BORD)
-           ========================================================================== */
-        .slide-bg {
-            position: absolute;
+        #bg-stage {
+            position: fixed;
             inset: 0;
             width: 100%;
             height: 100%;
             z-index: 1;
             overflow: hidden;
             pointer-events: none;
+            background-color: #000000;
+        }
+
+        .bg-slide {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition-property: opacity;
+            transition-timing-function: ease-out;
+            will-change: opacity;
+        }
+
+        .bg-slide.is-unloaded {
+            visibility: hidden;
         }
 
         .bg-layer {
@@ -125,7 +115,16 @@
         /* Fond Face B (visible quand la Face A est au premier plan) */
         .bg-layer.bg-b {
             background-color: #ffffff;
-            opacity: var(--bg-opacity-b);
+            opacity: 1;
+        }
+
+        /* Voile blanc de 47% par-dessus l'image de fond quand la Face A est au premier plan */
+        .bg-layer.bg-b::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-color: rgba(255, 255, 255, var(--bg-veil-white));
+            pointer-events: none;
         }
 
         /* Fond Face A (visible quand la Face B est au premier plan) */
@@ -134,12 +133,26 @@
             opacity: 0;
         }
 
+        /* Voile noir de 47% par-dessus l'image de fond quand la Face B est au premier plan */
+        .bg-layer.bg-a::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-color: rgba(0, 0, 0, var(--bg-veil-black));
+            pointer-events: none;
+        }
+
+        /* Si l'image est manquante, pas de voile blanc sur le fond noir */
+        .bg-layer.is-missing::after {
+            display: none;
+        }
+
         /* Bascule de l'arrière-plan quand la carte est retournée */
-        .swiper-slide.is-flipped .bg-layer.bg-b {
+        .bg-slide.is-flipped .bg-layer.bg-b {
             opacity: 0;
         }
-        .swiper-slide.is-flipped .bg-layer.bg-a {
-            opacity: var(--bg-opacity-a);
+        .bg-slide.is-flipped .bg-layer.bg-a {
+            opacity: 1;
         }
 
         .bg-layer img {
@@ -157,6 +170,41 @@
 
         .bg-layer.bg-b img {
             transform: scale(var(--bg-scale-b));
+        }
+
+        /* ==========================================================================
+           CONTENEUR SWIPER (CARTES AU PREMIER PLAN QUI S'EMPILENT)
+           ========================================================================== */
+        .swiper {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+            background: transparent;
+        }
+
+        .swiper-slide {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: visible;
+            background: transparent;
+        }
+
+        /* Une fois le swipe terminé, on cache la pile de cartes en dessous */
+        .swiper:not(.is-sliding) .swiper-slide:not(.swiper-slide-active) .card-scene {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s ease;
+        }
+
+        /* Optimisation mémoire iOS : masque le rendu des slides éloignées */
+        .swiper-slide.is-unloaded .card-scene {
+            visibility: hidden;
         }
 
         /* ==========================================================================
@@ -204,7 +252,7 @@
             background: transparent;
         }
 
-        /* Bascule nette à mi-parcours (90°) pour que la Face A ne transparaisse jamais sous les 86% de la Face B */
+        /* Bascule nette à mi-parcours (90°) pour que la Face A ne transparaisse jamais sous les 93% de la Face B */
         .card-face.front {
             opacity: 1;
             transition: opacity 0s linear var(--flip-half);
@@ -241,8 +289,7 @@
             display: block;
         }
 
-        /* Désactive temporairement les transitions pour les mises à jour instantanées hors-écran */
-        .no-transition,
+        /* Désactive temporairement les transitions internes pour les mises à jour instantanées hors-écran */
         .no-transition .card-object,
         .no-transition .card-face,
         .no-transition .bg-layer {
@@ -252,7 +299,10 @@
 </head>
 <body>
 
-    <!-- Swiper Container Principal -->
+    <!-- Scène d'arrière-plan fixe (transite en fondu enchaîné) -->
+    <div id="bg-stage"></div>
+
+    <!-- Swiper Container Principal (cartes au premier plan qui arrivent par-dessus) -->
     <div class="swiper">
         <div class="swiper-wrapper" id="cards-wrapper"></div>
     </div>
@@ -263,10 +313,11 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const totalCards = 18;
+            const bgStage = document.getElementById('bg-stage');
             const wrapper = document.getElementById('cards-wrapper');
             let isGlobalFlipped = false; // false = Face A au 1er plan / true = Face B au 1er plan
 
-            if (!wrapper) return;
+            if (!wrapper || !bgStage) return;
 
             // Gestion d'erreur d'image : affiche simplement un fond noir à la place
             window.handleImageError = function(imgElement) {
@@ -274,43 +325,47 @@
                 imgElement.dataset.failed = 'true';
                 imgElement.style.display = 'none';
                 if (imgElement.parentElement) {
+                    imgElement.parentElement.classList.add('is-missing');
                     imgElement.parentElement.style.backgroundColor = '#000000';
                 }
             };
 
-            // 1. GÉNÉRATION DES 18 SLIDES (sans charger toutes les textures d'un coup pour iOS)
+            // 1. GÉNÉRATION DES 18 ARRIÈRE-PLANS ET DES 18 CARTES DE PREMIER PLAN
             for (let i = 1; i <= totalCards; i++) {
                 const num = i.toString().padStart(2, '0');
                 const imgRecto = `images/cards/card-${num}-a.png`;
                 const imgVerso = `images/cards/card-${num}-b.png`;
 
+                // Arrière-plan (dans #bg-stage fixe, pour le fondu enchaîné)
+                const bgHTML = `
+                    <div class="bg-slide is-unloaded" data-index="${i - 1}">
+                        <div class="bg-layer bg-b">
+                            <img data-src="${imgVerso}" alt="" decoding="async"
+                                 onerror="handleImageError(this)">
+                        </div>
+                        <div class="bg-layer bg-a">
+                            <img data-src="${imgRecto}" alt="" decoding="async"
+                                 onerror="handleImageError(this)">
+                        </div>
+                    </div>
+                `;
+                bgStage.insertAdjacentHTML('beforeend', bgHTML);
+
+                // Carte au premier plan (dans Swiper, pour l'arrivée verticale par-dessus)
                 const slideHTML = `
                     <div class="swiper-slide is-unloaded" data-index="${i - 1}">
-                        <!-- ARRIÈRE-PLAN PLEIN ÉCRAN (Face opposée) -->
-                        <div class="slide-bg">
-                            <div class="bg-layer bg-b">
-                                <img data-src="${imgVerso}" alt="" decoding="async"
-                                     onerror="handleImageError(this, '${imgVerso}')">
-                            </div>
-                            <div class="bg-layer bg-a">
-                                <img data-src="${imgRecto}" alt="" decoding="async"
-                                     onerror="handleImageError(this, '${imgRecto}')">
-                            </div>
-                        </div>
-
-                        <!-- CARTE AU PREMIER PLAN -->
                         <div class="card-scene">
                             <div class="card-object">
                                 <!-- RECTO (Face A - 100% opacité) -->
                                 <div class="card-face front">
                                     <img data-src="${imgRecto}" alt="Bénédiction ${i}" decoding="async"
-                                         onerror="handleImageError(this, '${imgRecto}')">
+                                         onerror="handleImageError(this)">
                                 </div>
 
-                                <!-- VERSO (Face B - 86% opacité) -->
+                                <!-- VERSO (Face B - 93% opacité) -->
                                 <div class="card-face back">
                                     <img data-src="${imgVerso}" alt="Explication ${i}" decoding="async"
-                                         onerror="handleImageError(this, '${imgVerso}')">
+                                         onerror="handleImageError(this)">
                                 </div>
                             </div>
                         </div>
@@ -319,68 +374,153 @@
                 wrapper.insertAdjacentHTML('beforeend', slideHTML);
             }
 
+            const bgSlides = bgStage.querySelectorAll('.bg-slide');
+            const swiperSlides = wrapper.querySelectorAll('.swiper-slide');
+
             // 2. GESTION MÉMOIRE GPU iOS :
             // Ne garde en mémoire que la carte active et ses voisines immédiates (évite le crash WebKit sur iOS)
             function updateLoadedSlides(activeIndex) {
-                const slides = wrapper.querySelectorAll('.swiper-slide');
-                slides.forEach((slide, index) => {
+                for (let index = 0; index < totalCards; index++) {
                     const shouldBeLoaded = index >= activeIndex - 1 && index <= activeIndex + 2;
-                    const imgs = slide.querySelectorAll('img[data-src]');
+                    const pair = [swiperSlides[index], bgSlides[index]];
 
-                    if (shouldBeLoaded) {
-                        slide.classList.remove('is-unloaded');
-                        imgs.forEach(img => {
-                            if (img.dataset.failed === 'true') return;
-                            const targetSrc = img.getAttribute('data-src');
-                            if (img.getAttribute('src') !== targetSrc) {
-                                img.style.display = 'block';
-                                img.setAttribute('src', targetSrc);
-                            }
-                        });
+                    pair.forEach(container => {
+                        if (!container) return;
+                        const imgs = container.querySelectorAll('img[data-src]');
+                        if (shouldBeLoaded) {
+                            container.classList.remove('is-unloaded');
+                            imgs.forEach(img => {
+                                if (img.dataset.failed === 'true') return;
+                                const targetSrc = img.getAttribute('data-src');
+                                if (img.getAttribute('src') !== targetSrc) {
+                                    img.style.display = 'block';
+                                    img.setAttribute('src', targetSrc);
+                                }
+                            });
+                        } else {
+                            container.classList.add('is-unloaded');
+                            imgs.forEach(img => {
+                                if (img.hasAttribute('src')) {
+                                    img.removeAttribute('src');
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+
+            // Applique l'état retourné ou non à une slide et son fond (avec ou sans animation)
+            function applyFlipAtIndex(index, flipped, animate) {
+                const pair = [swiperSlides[index], bgSlides[index]];
+                pair.forEach(el => {
+                    if (!el) return;
+                    if (!animate) {
+                        el.classList.add('no-transition');
+                    }
+                    if (flipped) {
+                        el.classList.add('is-flipped');
                     } else {
-                        slide.classList.add('is-unloaded');
-                        imgs.forEach(img => {
-                            if (img.hasAttribute('src')) {
-                                img.removeAttribute('src');
-                            }
-                        });
+                        el.classList.remove('is-flipped');
+                    }
+                    if (!animate) {
+                        void el.offsetWidth; // Force le recalcul immédiat sans transition
+                        el.classList.remove('no-transition');
                     }
                 });
             }
 
-            // Applique l'état retourné ou non à une slide (avec ou sans animation)
-            function applyFlipToSlide(slide, flipped, animate) {
-                if (!animate) {
-                    slide.classList.add('no-transition');
+            let currentBgDuration = 0;
+            let baseBgIndex = 0;
+
+            // Synchronise le fondu enchaîné de l'arrière-plan avec la progression verticale du swipe
+            // Le fond de départ (baseBgIndex) reste à opacité 1 en dessous (z-index: 1) pendant que le nouveau fond
+            // varie entre 0 et 1 par-dessus (z-index: 2), garantissant un fondu enchaîné pur sans saut ni voile gris.
+            function syncBackgroundCrossfade(swiperInstance) {
+                const activeIdx = swiperInstance.activeIndex || 0;
+
+                for (let i = 0; i < swiperInstance.slides.length; i++) {
+                    const absP = Math.abs(swiperInstance.slides[i].progress || 0);
+                    const bgSlide = bgSlides[i];
+                    if (!bgSlide) continue;
+
+                    if (absP >= 0.999) {
+                        if (currentBgDuration > 0 && bgSlide.dataset.wasVisible === 'true') {
+                            if (i === baseBgIndex && activeIdx !== baseBgIndex) {
+                                // Le fond de départ reste à opacité 1 en dessous pendant toute la durée du fondu
+                                bgSlide.style.zIndex = '1';
+                                bgSlide.style.transition = `opacity 0ms linear ${currentBgDuration}ms`;
+                            } else {
+                                // Un glissement annulé redescend doucement vers 0 par-dessus la base
+                                bgSlide.style.zIndex = '2';
+                                void bgSlide.offsetWidth;
+                                bgSlide.style.transition = `opacity ${currentBgDuration}ms ease-out`;
+                            }
+                        } else {
+                            bgSlide.style.zIndex = '0';
+                            bgSlide.style.transition = 'none';
+                        }
+                        bgSlide.style.opacity = '0';
+                        bgSlide.dataset.wasVisible = 'false';
+                    } else {
+                        bgSlide.dataset.wasVisible = 'true';
+
+                        if (currentBgDuration > 0) {
+                            // Transition animée (relâchement du doigt, molette ou clavier)
+                            if (i === baseBgIndex && activeIdx === baseBgIndex) {
+                                // Retour à la carte de départ après un petit glissement annulé
+                                bgSlide.style.zIndex = '1';
+                                bgSlide.style.transition = 'none';
+                                bgSlide.style.opacity = '1';
+                            } else {
+                                // Nouvelle carte active qui fond de son opacité actuelle jusqu'à 1
+                                bgSlide.style.zIndex = '2';
+                                void bgSlide.offsetWidth;
+                                bgSlide.style.transition = `opacity ${currentBgDuration}ms ease-out`;
+                                bgSlide.style.opacity = '1';
+                            }
+                        } else {
+                            // Glissement tactile en direct (duration === 0)
+                            bgSlide.style.transition = 'none';
+                            if (i === baseBgIndex) {
+                                bgSlide.style.zIndex = '1';
+                                bgSlide.style.opacity = '1';
+                            } else {
+                                bgSlide.style.zIndex = '2';
+                                bgSlide.style.opacity = (1 - absP).toFixed(3);
+                            }
+                        }
+                    }
                 }
-                if (flipped) {
-                    slide.classList.add('is-flipped');
-                } else {
-                    slide.classList.remove('is-flipped');
-                }
-                if (!animate) {
-                    void slide.offsetWidth; // Force le recalcul immédiat sans transition
-                    slide.classList.remove('no-transition');
+
+                if (currentBgDuration > 0) {
+                    baseBgIndex = activeIdx;
                 }
             }
 
-            // 3. INITIALISATION DE SWIPER (Empilement vertical sans pile visible après le swipe)
+            const swiperEl = document.querySelector('.swiper');
+
+            // 3. INITIALISATION DE SWIPER
+            // Les cartes du premier plan arrivent par-dessus verticalement, tandis que #bg-stage fait un fondu enchaîné
             const swiper = new Swiper('.swiper', {
                 direction: 'vertical',
                 effect: 'creative',
+                watchSlidesProgress: true,
                 creativeEffect: {
-                    limitProgress: 1, // Seule la carte immédiatement sous la nouvelle est calculée
+                    limitProgress: 2,
                     perspective: false,
                     prev: {
-                        // La carte précédente reste exactement dessous et est entièrement recouverte
+                        // La carte précédente reste en place dessous pendant que la nouvelle la recouvre
                         shadow: false,
                         translate: [0, 0, -1],
                         scale: 1,
                         opacity: 1,
                     },
                     next: {
-                        // La carte suivante monte du bas pour s'empiler par-dessus
+                        // La nouvelle carte arrive du bas par-dessus la carte actuelle
+                        shadow: false,
                         translate: [0, '100%', 0],
+                        scale: 1,
+                        opacity: 1,
                     },
                 },
                 speed: 550,
@@ -391,17 +531,32 @@
                 on: {
                     init: function () {
                         updateLoadedSlides(0);
+                        syncBackgroundCrossfade(this);
+                    },
+                    sliderFirstMove: function () {
+                        swiperEl.classList.add('is-sliding');
+                    },
+                    transitionStart: function () {
+                        swiperEl.classList.add('is-sliding');
+                    },
+                    transitionEnd: function () {
+                        swiperEl.classList.remove('is-sliding');
+                    },
+                    touchEnd: function () {
+                        if (!this.animating) {
+                            swiperEl.classList.remove('is-sliding');
+                        }
+                    },
+                    setTransition: function (swiperInstance, duration) {
+                        currentBgDuration = duration;
+                    },
+                    setTranslate: function () {
+                        syncBackgroundCrossfade(this);
                     },
                     slideChange: function () {
                         const activeIndex = this.activeIndex;
                         updateLoadedSlides(activeIndex);
-
-                        // S'assure que la carte active et ses voisines sont sur la bonne face sans animer pendant le slide
-                        this.slides.forEach((slide, idx) => {
-                            if (idx === activeIndex) {
-                                applyFlipToSlide(slide, isGlobalFlipped, false);
-                            }
-                        });
+                        applyFlipAtIndex(activeIndex, isGlobalFlipped, false);
                     }
                 }
             });
@@ -411,10 +566,10 @@
                 isGlobalFlipped = !isGlobalFlipped;
                 const activeIndex = swiper.activeIndex;
 
-                swiper.slides.forEach((slide, idx) => {
-                    // Anime uniquement la slide visible ; met à jour les autres instantanément
-                    applyFlipToSlide(slide, isGlobalFlipped, idx === activeIndex);
-                });
+                for (let idx = 0; idx < totalCards; idx++) {
+                    // Anime uniquement la carte et le fond actifs ; met à jour les autres instantanément
+                    applyFlipAtIndex(idx, isGlobalFlipped, idx === activeIndex);
+                }
             };
 
             // 5. DÉTECTION DU SWIPE HORIZONTAL ET DU TAP POUR RETOURNER LA CARTE
@@ -423,8 +578,6 @@
             let startTime = 0;
             let isTracking = false;
             let lastTouchTime = 0;
-
-            const swiperEl = document.querySelector('.swiper');
 
             function onGestureStart(x, y) {
                 startX = x;
