@@ -11,114 +11,242 @@
     <!-- Configuration iOS Web App -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#121212">
+    <meta name="theme-color" content="#000000">
     
-    <!-- Icône pour l'écran d'accueil (utilise la première carte par défaut) -->
+    <!-- Icône pour l'écran d'accueil -->
     <link rel="apple-touch-icon" href="images/cards/card-01-a.png">
 
-    <!-- Swiper CSS (Librairie pour le slide) -->
+    <!-- Swiper CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 
     <style>
-        /* --- RESET & BASE --- */
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body, html {
-            margin: 0; padding: 0;
-            /* Utilisation de dvh pour s'adapter parfaitement aux mobiles avec barres d'adresse */
-            height: 100vh;
-            height: 100dvh; 
+        /* ==========================================================================
+           PARAMÈTRES D'AJUSTEMENT VISUEL (Modifiez ces valeurs selon vos besoins)
+           ========================================================================== */
+        :root {
+            /* 1. Taille de la carte au premier plan */
+            --card-width: 88vw;               /* Largeur de la carte (ex: 75vw à 92vw) */
+            --card-max-height: 60dvh;         /* Hauteur max de la carte (ex: 50dvh à 75dvh) */
+            --card-radius: 3.1% / 2.2%;       /* Arrondi des coins de la carte */
+
+            /* 2. Opacité de la carte au premier plan */
+            --face-a-opacity: 1;              /* Opacité quand la Face A est devant (1 = 100%) */
+            --face-b-opacity: 0.86;           /* Opacité quand la Face B est devant (0.86 = 86%) */
+
+            /* 3. Lueur externe noire (effet de premier plan) */
+            /* Format : [décalage-x] [décalage-y] [flou] [étendue] [couleur] */
+            --card-glow: 0 0 28px 6px rgba(0, 0, 0, 0.85);
+
+            /* 4. Arrière-plan (plein écran sans bord) */
+            /* Zoom (> 1.07) pour rogner les bords de la carte en arrière-plan */
+            --bg-scale-a: 1.08;               /* Zoom du fond quand la Face A est en arrière-plan */
+            --bg-scale-b: 1.08;               /* Zoom du fond quand la Face B est en arrière-plan */
+            --bg-opacity-a: 1;                /* Opacité de la Face A en arrière-plan */
+            --bg-opacity-b: 1;                /* Opacité de la Face B en arrière-plan */
+
+            /* 5. Vitesse des animations */
+            --flip-duration: 0.6s;            /* Durée du retournement 3D */
+            --flip-half: 0.3s;                /* Moitié de --flip-duration (bascule à 90°) */
+        }
+
+        /* ==========================================================================
+           RESET & BASE
+           ========================================================================== */
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            position: fixed;
+            inset: 0;
             width: 100%;
-            overflow: hidden; 
-            background-color: #121212; 
+            height: 100%;
+            height: 100dvh;
+            overflow: hidden;
+            background-color: #000000;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
-        /* --- CONTENEUR SWIPER --- */
+        /* ==========================================================================
+           CONTENEUR SWIPER & SLIDES
+           ========================================================================== */
         .swiper {
             width: 100%;
             height: 100%;
+            touch-action: none;
         }
 
         .swiper-slide {
+            position: relative;
+            width: 100%;
+            height: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 0;
-            /* Important pour l'effet stack : permet de voir la carte du dessous */
-            overflow: visible; 
-            background: transparent;
+            overflow: hidden; /* Empêche tout débordement de l'arrière-plan */
+            background: #000000;
         }
 
-        /* --- LA CARTE (SCÈNE 3D) --- */
-        .card-scene {
+        /* Optimisation mémoire iOS : masque le rendu des slides éloignées */
+        .swiper-slide.is-unloaded .slide-bg,
+        .swiper-slide.is-unloaded .card-scene {
+            visibility: hidden;
+        }
+
+        /* ==========================================================================
+           ARRIÈRE-PLAN PLEIN ÉCRAN (SANS BORD)
+           ========================================================================== */
+        .slide-bg {
+            position: absolute;
+            inset: 0;
             width: 100%;
-            /* Dimensions ajustées pour bien remplir l'écran sans déborder */
-            max-width: 90vw; 
-            aspect-ratio: 9/16; 
-            max-height: 85dvh; /* Laisse un peu de place en haut/bas pour l'effet d'empilement */
-            perspective: 1000px;
-            cursor: pointer;
-            margin: auto; 
-            position: relative;
+            height: 100%;
+            z-index: 1;
+            overflow: hidden;
+            pointer-events: none;
         }
 
-        /* Le conteneur qui bouge */
+        .bg-layer {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: opacity var(--flip-duration) ease;
+        }
+
+        /* Fond Face B (visible quand la Face A est au premier plan) */
+        .bg-layer.bg-b {
+            background-color: #ffffff;
+            opacity: var(--bg-opacity-b);
+        }
+
+        /* Fond Face A (visible quand la Face B est au premier plan) */
+        .bg-layer.bg-a {
+            background-color: #000000;
+            opacity: 0;
+        }
+
+        /* Bascule de l'arrière-plan quand la carte est retournée */
+        .swiper-slide.is-flipped .bg-layer.bg-b {
+            opacity: 0;
+        }
+        .swiper-slide.is-flipped .bg-layer.bg-a {
+            opacity: var(--bg-opacity-a);
+        }
+
+        .bg-layer img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Couvre 100% de la hauteur et de la largeur */
+            object-position: center center;
+            display: block;
+            pointer-events: none;
+        }
+
+        .bg-layer.bg-a img {
+            transform: scale(var(--bg-scale-a));
+        }
+
+        .bg-layer.bg-b img {
+            transform: scale(var(--bg-scale-b));
+        }
+
+        /* ==========================================================================
+           CARTE AU PREMIER PLAN (SCÈNE 3D)
+           ========================================================================== */
+        .card-scene {
+            position: relative;
+            z-index: 2;
+            /* Garde toujours le ratio exact 1080/1522 de la carte pour que la lueur colle aux bords */
+            width: min(var(--card-width), calc(var(--card-max-height) * 1080 / 1522));
+            aspect-ratio: 1080 / 1522;
+            perspective: 1200px;
+            cursor: pointer;
+            margin: auto;
+        }
+
         .card-object {
             width: 100%;
             height: 100%;
             position: relative;
             transform-style: preserve-3d;
-            transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1); /* Animation de retournement plus fluide */
-            /* Suppression du background, border-radius et box-shadow sur le conteneur */
+            -webkit-transform-style: preserve-3d;
+            transition: transform var(--flip-duration) cubic-bezier(0.25, 0.8, 0.25, 1);
         }
 
-        /* Classe ajoutée en JS pour retourner la carte */
-        .card-object.is-flipped {
+        /* État retourné (Face B au premier plan) */
+        .swiper-slide.is-flipped .card-object {
             transform: rotateY(180deg);
         }
 
         /* --- FACES DE LA CARTE --- */
         .card-face {
             position: absolute;
+            inset: 0;
             width: 100%;
             height: 100%;
             backface-visibility: hidden;
             -webkit-backface-visibility: hidden;
-            /* Suppression de l'overflow hidden et border-radius pour laisser passer l'ombre de l'image */
-            overflow: visible;
-            background: transparent; 
+            border-radius: var(--card-radius);
+            /* Lueur externe noire pour l'effet de premier plan */
+            box-shadow: var(--card-glow);
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
-        }
-
-        /* Face Arrière (Verso) */
-        .card-face.back {
-            transform: rotateY(180deg);
             background: transparent;
         }
 
-        /* --- IMAGES --- */
+        /* Bascule nette à mi-parcours (90°) pour que la Face A ne transparaisse jamais sous les 86% de la Face B */
+        .card-face.front {
+            opacity: 1;
+            transition: opacity 0s linear var(--flip-half);
+        }
+
+        .card-face.back {
+            transform: rotateY(180deg);
+            opacity: 0;
+            transition: opacity 0s linear var(--flip-half);
+        }
+
+        .swiper-slide.is-flipped .card-face.front {
+            opacity: 0;
+        }
+
+        .swiper-slide.is-flipped .card-face.back {
+            opacity: 1;
+        }
+
+        /* Opacité propre à chaque face au premier plan */
+        .card-face.front img {
+            opacity: var(--face-a-opacity);
+        }
+
+        .card-face.back img {
+            opacity: var(--face-b-opacity);
+        }
+
         .card-face img {
             width: 100%;
             height: 100%;
-            object-fit: contain; /* L'image entière est toujours visible */
+            object-fit: contain;
             pointer-events: none;
             display: block;
-            /* L'ombre est maintenant calculée sur les pixels de l'image elle-même */
-            filter: drop-shadow(0 20px 30px rgba(0,0,0,0.8));
         }
-        
-        /* Style pour le message d'erreur d'image */
-        .error-message {
-            padding: 20px;
-            font-size: 0.8em;
-            text-align: center;
-            color: white;
-            line-height: 1.4;
-            background: rgba(0,0,0,0.8);
-            border-radius: 8px;
+
+        /* Désactive temporairement les transitions pour les mises à jour instantanées hors-écran */
+        .no-transition,
+        .no-transition .card-object,
+        .no-transition .card-face,
+        .no-transition .bg-layer {
+            transition: none !important;
         }
     </style>
 </head>
@@ -126,7 +254,6 @@
 
     <!-- Swiper Container Principal -->
     <div class="swiper">
-        <!-- Les cartes seront générées ici par le Javascript -->
         <div class="swiper-wrapper" id="cards-wrapper"></div>
     </div>
 
@@ -135,124 +262,232 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // CONFIGURATION
-            const totalCards = 18; // Nombre total de cartes
+            const totalCards = 18;
             const wrapper = document.getElementById('cards-wrapper');
-            let isGlobalFlipped = false; // État global : est-ce qu'on regarde le recto ou le verso ?
+            let isGlobalFlipped = false; // false = Face A au 1er plan / true = Face B au 1er plan
 
-            if (!wrapper) {
-                console.error("Erreur: L'élément 'cards-wrapper' est introuvable.");
-                return;
-            }
+            if (!wrapper) return;
 
-            // FONCTION DE GESTION D'ERREUR
-            window.handleImageError = function(imgElement, imageSource) {
+            // Gestion d'erreur d'image : affiche simplement un fond noir à la place
+            window.handleImageError = function(imgElement) {
+                if (!imgElement.getAttribute('src')) return; // Ignore la décharge mémoire volontaire
+                imgElement.dataset.failed = 'true';
                 imgElement.style.display = 'none';
-                const msg = document.createElement('div');
-                msg.className = 'error-message';
-                msg.innerHTML = `Image manquante:<br><br>${imageSource}`;
-                imgElement.parentElement.appendChild(msg);
+                if (imgElement.parentElement) {
+                    imgElement.parentElement.style.backgroundColor = '#000000';
+                }
             };
 
-            // GÉNÉRATION AUTOMATIQUE DES 18 CARTES
+            // 1. GÉNÉRATION DES 18 SLIDES (sans charger toutes les textures d'un coup pour iOS)
             for (let i = 1; i <= totalCards; i++) {
                 const num = i.toString().padStart(2, '0');
                 const imgRecto = `images/cards/card-${num}-a.png`;
                 const imgVerso = `images/cards/card-${num}-b.png`;
 
                 const slideHTML = `
-                    <div class="swiper-slide">
-                        <div class="card-scene" onclick="toggleGlobalFlip()">
+                    <div class="swiper-slide is-unloaded" data-index="${i - 1}">
+                        <!-- ARRIÈRE-PLAN PLEIN ÉCRAN (Face opposée) -->
+                        <div class="slide-bg">
+                            <div class="bg-layer bg-b">
+                                <img data-src="${imgVerso}" alt="" decoding="async"
+                                     onerror="handleImageError(this, '${imgVerso}')">
+                            </div>
+                            <div class="bg-layer bg-a">
+                                <img data-src="${imgRecto}" alt="" decoding="async"
+                                     onerror="handleImageError(this, '${imgRecto}')">
+                            </div>
+                        </div>
+
+                        <!-- CARTE AU PREMIER PLAN -->
+                        <div class="card-scene">
                             <div class="card-object">
-                                <!-- RECTO (Face A) -->
+                                <!-- RECTO (Face A - 100% opacité) -->
                                 <div class="card-face front">
-                                    <img src="${imgRecto}" alt="Bénédiction ${i}" 
+                                    <img data-src="${imgRecto}" alt="Bénédiction ${i}" decoding="async"
                                          onerror="handleImageError(this, '${imgRecto}')">
                                 </div>
 
-                                <!-- VERSO (Face B) -->
+                                <!-- VERSO (Face B - 86% opacité) -->
                                 <div class="card-face back">
-                                    <img src="${imgVerso}" alt="Explication ${i}"
+                                    <img data-src="${imgVerso}" alt="Explication ${i}" decoding="async"
                                          onerror="handleImageError(this, '${imgVerso}')">
                                 </div>
                             </div>
                         </div>
                     </div>
                 `;
-                
                 wrapper.insertAdjacentHTML('beforeend', slideHTML);
             }
 
-            // 1. Initialisation de Swiper (Mode "STACK" Vertical)
-            const swiper = new Swiper('.swiper', {
-                direction: 'vertical',
-                effect: 'creative', // Utilisation de l'effet "Créatif" pour faire le tas
-                creativeEffect: {
-                    limitProgress: 6, // Augmentation pour voir plus de cartes empilées en haut
-                    perspective: true,
-                    prev: {
-                        // Les cartes précédentes remontent et s'empilent en haut
-                        shadow: true,
-                        // [x, y, z] : Remonte de 6% (MODIF : plus fin) par carte, reste en taille réelle (scale 1)
-                        translate: [0, '-3%', -1], 
-                        scale: 1, 
-                        opacity: 1, 
-                    },
-                    next: {
-                        // La carte suivante arrive du bas et couvre tout
-                        translate: [0, '100%', 0], 
-                    },
-                },
-                speed: 600, // Vitesse de l'animation (ms) - un peu plus lent pour le "poids"
-                resistanceRatio: 0.8, // Sensation élastique aux extrémités
-                mousewheel: true,
-                keyboard: { enabled: true },
-            });
-            
-            // ÉCOUTEUR DE CHANGEMENT DE CARTE
-            // Garantit que la nouvelle carte (qu'on avance ou recule) s'affiche du bon côté
-            swiper.on('slideChange', function () {
-                const activeIndex = swiper.activeIndex;
-                const card = swiper.slides[activeIndex].querySelector('.card-object');
-                
-                // On met à jour l'état de la carte qui devient active sans animation (instantané)
-                // pour éviter de voir la carte tourner pendant le slide
-                card.style.transition = 'none';
-                if (isGlobalFlipped) card.classList.add('is-flipped');
-                else card.classList.remove('is-flipped');
-                void card.offsetWidth; // Force le navigateur à appliquer le changement
-                card.style.transition = ''; // On remet l'animation pour le prochain clic
-            });
+            // 2. GESTION MÉMOIRE GPU iOS :
+            // Ne garde en mémoire que la carte active et ses voisines immédiates (évite le crash WebKit sur iOS)
+            function updateLoadedSlides(activeIndex) {
+                const slides = wrapper.querySelectorAll('.swiper-slide');
+                slides.forEach((slide, index) => {
+                    const shouldBeLoaded = index >= activeIndex - 1 && index <= activeIndex + 2;
+                    const imgs = slide.querySelectorAll('img[data-src]');
 
-            // 2. Fonction pour gérer le retournement
-            window.toggleGlobalFlip = function() {
-                isGlobalFlipped = !isGlobalFlipped;
-                
-                const slides = swiper.slides;
-                const activeIndex = swiper.activeIndex;
-                
-                for (let i = 0; i < slides.length; i++) {
-                    const card = slides[i].querySelector('.card-object');
-                    
-                    if (i === activeIndex) {
-                        // Carte active : On l'anime visiblement
-                        card.style.transition = ''; 
-                        if (isGlobalFlipped) card.classList.add('is-flipped');
-                        else card.classList.remove('is-flipped');
-                    } 
-                    else if (i > activeIndex) {
-                        // Cartes futures (cachées) : On les met à jour silencieusement
-                        // Comme ça, quand elles arriveront, elles seront déjà correctes
-                        card.style.transition = 'none';
-                        if (isGlobalFlipped) card.classList.add('is-flipped');
-                        else card.classList.remove('is-flipped');
-                        void card.offsetWidth;
-                        card.style.transition = '';
+                    if (shouldBeLoaded) {
+                        slide.classList.remove('is-unloaded');
+                        imgs.forEach(img => {
+                            if (img.dataset.failed === 'true') return;
+                            const targetSrc = img.getAttribute('data-src');
+                            if (img.getAttribute('src') !== targetSrc) {
+                                img.style.display = 'block';
+                                img.setAttribute('src', targetSrc);
+                            }
+                        });
+                    } else {
+                        slide.classList.add('is-unloaded');
+                        imgs.forEach(img => {
+                            if (img.hasAttribute('src')) {
+                                img.removeAttribute('src');
+                            }
+                        });
                     }
-                    // Cartes passées (i < activeIndex) : On ne touche RIEN.
-                    // Elles restent dans leur état actuel dans le tas visible pour ne pas distraire l'œil.
+                });
+            }
+
+            // Applique l'état retourné ou non à une slide (avec ou sans animation)
+            function applyFlipToSlide(slide, flipped, animate) {
+                if (!animate) {
+                    slide.classList.add('no-transition');
+                }
+                if (flipped) {
+                    slide.classList.add('is-flipped');
+                } else {
+                    slide.classList.remove('is-flipped');
+                }
+                if (!animate) {
+                    void slide.offsetWidth; // Force le recalcul immédiat sans transition
+                    slide.classList.remove('no-transition');
                 }
             }
+
+            // 3. INITIALISATION DE SWIPER (Empilement vertical sans pile visible après le swipe)
+            const swiper = new Swiper('.swiper', {
+                direction: 'vertical',
+                effect: 'creative',
+                creativeEffect: {
+                    limitProgress: 1, // Seule la carte immédiatement sous la nouvelle est calculée
+                    perspective: false,
+                    prev: {
+                        // La carte précédente reste exactement dessous et est entièrement recouverte
+                        shadow: false,
+                        translate: [0, 0, -1],
+                        scale: 1,
+                        opacity: 1,
+                    },
+                    next: {
+                        // La carte suivante monte du bas pour s'empiler par-dessus
+                        translate: [0, '100%', 0],
+                    },
+                },
+                speed: 550,
+                resistanceRatio: 0.8,
+                touchAngle: 45,
+                mousewheel: true,
+                keyboard: { enabled: true },
+                on: {
+                    init: function () {
+                        updateLoadedSlides(0);
+                    },
+                    slideChange: function () {
+                        const activeIndex = this.activeIndex;
+                        updateLoadedSlides(activeIndex);
+
+                        // S'assure que la carte active et ses voisines sont sur la bonne face sans animer pendant le slide
+                        this.slides.forEach((slide, idx) => {
+                            if (idx === activeIndex) {
+                                applyFlipToSlide(slide, isGlobalFlipped, false);
+                            }
+                        });
+                    }
+                }
+            });
+
+            // 4. FONCTION DE RETOURNEMENT (Face A <-> Face B)
+            window.toggleGlobalFlip = function() {
+                isGlobalFlipped = !isGlobalFlipped;
+                const activeIndex = swiper.activeIndex;
+
+                swiper.slides.forEach((slide, idx) => {
+                    // Anime uniquement la slide visible ; met à jour les autres instantanément
+                    applyFlipToSlide(slide, isGlobalFlipped, idx === activeIndex);
+                });
+            };
+
+            // 5. DÉTECTION DU SWIPE HORIZONTAL ET DU TAP POUR RETOURNER LA CARTE
+            let startX = 0;
+            let startY = 0;
+            let startTime = 0;
+            let isTracking = false;
+            let lastTouchTime = 0;
+
+            const swiperEl = document.querySelector('.swiper');
+
+            function onGestureStart(x, y) {
+                startX = x;
+                startY = y;
+                startTime = Date.now();
+                isTracking = true;
+            }
+
+            function onGestureEnd(x, y) {
+                if (!isTracking) return;
+                isTracking = false;
+
+                const deltaX = x - startX;
+                const deltaY = y - startY;
+                const absX = Math.abs(deltaX);
+                const absY = Math.abs(deltaY);
+                const elapsed = Date.now() - startTime;
+
+                // Cas 1 : Swipe horizontal franc (gauche ou droite)
+                if (absX > 30 && absX > absY * 1.2) {
+                    window.toggleGlobalFlip();
+                    return;
+                }
+
+                // Cas 2 : Tap / Clic rapide sans mouvement vertical
+                if (absX < 12 && absY < 12 && elapsed < 350) {
+                    window.toggleGlobalFlip();
+                }
+            }
+
+            // Événements tactiles (iOS / Android)
+            swiperEl.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    lastTouchTime = Date.now();
+                    onGestureStart(e.touches[0].clientX, e.touches[0].clientY);
+                }
+            }, { passive: true });
+
+            swiperEl.addEventListener('touchend', (e) => {
+                if (e.changedTouches.length === 1) {
+                    lastTouchTime = Date.now();
+                    onGestureEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+                }
+            }, { passive: true });
+
+            // Événements souris (Ordinateur)
+            swiperEl.addEventListener('mousedown', (e) => {
+                if (Date.now() - lastTouchTime < 500) return;
+                onGestureStart(e.clientX, e.clientY);
+            });
+
+            swiperEl.addEventListener('mouseup', (e) => {
+                if (Date.now() - lastTouchTime < 500) return;
+                onGestureEnd(e.clientX, e.clientY);
+            });
+
+            // Support des flèches Gauche / Droite au clavier pour retourner la carte
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === ' ') {
+                    e.preventDefault();
+                    window.toggleGlobalFlip();
+                }
+            });
         });
     </script>
 </body>
