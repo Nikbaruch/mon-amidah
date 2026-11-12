@@ -295,9 +295,117 @@
         .no-transition .bg-layer {
             transition: none !important;
         }
+
+        /* ==========================================================================
+           ÉCRAN D'INTRODUCTION SÉQUENTIEL ("turn it" -> "next one")
+           ========================================================================== */
+        #onboarding-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.72);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #ffffff;
+            opacity: 1;
+            transition: opacity 0.45s ease;
+            cursor: pointer;
+        }
+
+        #onboarding-overlay.is-hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .hint-step {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            opacity: 0;
+        }
+
+        .hint-step svg {
+            width: 56px;
+            height: 56px;
+            stroke: #ffffff;
+            stroke-width: 2;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.8));
+        }
+
+        .hint-label {
+            font-size: 1.25rem;
+            font-weight: 500;
+            letter-spacing: 0.14em;
+            text-transform: lowercase;
+            margin: 0;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
+        }
+
+        /* Étape 1 : "turn it" (de 0.1s à 1.8s) */
+        .hint-step.step-turn {
+            animation: stepFade 1.7s ease-in-out 0.1s forwards;
+        }
+        .hint-step.step-turn svg {
+            animation: arrowGlideHorizontal 1.7s ease-in-out 0.1s forwards;
+        }
+
+        /* Étape 2 : "next one" (de 1.85s à 3.55s) */
+        .hint-step.step-next {
+            animation: stepFade 1.7s ease-in-out 1.85s forwards;
+        }
+        .hint-step.step-next svg {
+            animation: arrowGlideVertical 1.7s ease-in-out 1.85s forwards;
+        }
+
+        @keyframes stepFade {
+            0% { opacity: 0; }
+            22%, 78% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        @keyframes arrowGlideHorizontal {
+            0% { transform: translateX(-28px); }
+            50% { transform: translateX(28px); }
+            100% { transform: translateX(-10px); }
+        }
+
+        @keyframes arrowGlideVertical {
+            0% { transform: translateY(28px); }
+            100% { transform: translateY(-28px); }
+        }
     </style>
 </head>
 <body>
+
+    <!-- Animation séquentielle à l'ouverture : 1) "turn it" puis 2) "next one" -->
+    <div id="onboarding-overlay">
+        <!-- 1. Flèche horizontale + "turn it" -->
+        <div class="hint-step step-turn">
+            <svg viewBox="0 0 24 24">
+                <line x1="4" y1="12" x2="20" y2="12"></line>
+                <polyline points="14 6 20 12 14 18"></polyline>
+            </svg>
+            <p class="hint-label">turn it</p>
+        </div>
+
+        <!-- 2. Flèche verticale + "next one" -->
+        <div class="hint-step step-next">
+            <svg viewBox="0 0 24 24">
+                <line x1="12" y1="20" x2="12" y2="4"></line>
+                <polyline points="6 10 12 4 18 10"></polyline>
+            </svg>
+            <p class="hint-label">next one</p>
+        </div>
+    </div>
 
     <!-- Scène d'arrière-plan fixe (transite en fondu enchaîné) -->
     <div id="bg-stage"></div>
@@ -315,7 +423,26 @@
             const totalCards = 18;
             const bgStage = document.getElementById('bg-stage');
             const wrapper = document.getElementById('cards-wrapper');
+            const onboarding = document.getElementById('onboarding-overlay');
             let isGlobalFlipped = false; // false = Face A au 1er plan / true = Face B au 1er plan
+
+            // Fermeture de l'écran d'introduction (à la fin des 2 animations ou au premier toucher)
+            if (onboarding) {
+                const dismissOnboarding = (e) => {
+                    if (e) e.stopPropagation();
+                    onboarding.classList.add('is-hidden');
+                    setTimeout(() => onboarding.remove(), 500);
+                };
+                const autoTimer = setTimeout(() => dismissOnboarding(), 3600);
+                onboarding.addEventListener('pointerdown', (e) => {
+                    clearTimeout(autoTimer);
+                    dismissOnboarding(e);
+                }, { once: true });
+                onboarding.addEventListener('touchstart', (e) => {
+                    clearTimeout(autoTimer);
+                    dismissOnboarding(e);
+                }, { once: true, passive: true });
+            }
 
             if (!wrapper || !bgStage) return;
 
